@@ -13,6 +13,13 @@ int main(int argc, const char *argv[]){
 	char type[20];
 	scanf("%s", type);
 	scanf("%d",&p_num);
+    // allocate memory for global variable
+    P = (int *)malloc(p_num * sizeof(int));
+    R = (int *)malloc(p_num * sizeof(int));
+    T = (int *)malloc(p_num * sizeof(int));
+    pid = (int *)malloc(p_num * sizeof(int));
+
+
 	for(int i = 0; i < p_num; i++){
 		scanf("%s%d%d",N[i],&R[i],&T[i]);
 		P[i] = i;
@@ -45,5 +52,11 @@ int main(int argc, const char *argv[]){
             break;
 
 	}
+    // free the memory for global memory
+    free(P);
+    free(R);
+    free(T);
+    free(pid);
+
 }
 

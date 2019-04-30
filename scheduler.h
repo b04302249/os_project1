@@ -19,8 +19,8 @@
 #include <sched.h>
 #include <assert.h>
 
-int p_num, R[100],T[100],P[100];
-int pid[1000];
+int p_num;
+int *R, *T, *P, *pid;
 int tmp_s[1000];
 char N[100][33];
 
