@@ -1,6 +1,6 @@
 /******************************************************************************
   filename          [ scheduler.c ]
-  packagename       [ os_project_1]
+  packagename       [ os_project_1 ]
   synopsis          [ implement for scheduler ]
 ******************************************************************************/  
 
@@ -92,7 +92,6 @@ void SJF(){
 			if(R[P[j]] > finish_time) break;
 			point++;
         }
-
 	}
 
 
@@ -139,57 +138,57 @@ void parent_wait(){
 }
 
 void RR(){
-    for(int i = 0; i < p_num-1; i++)
-        for(int j = 0; j < p_num-i-1; j++)
-            if(R[j] > R[j+1]){ swap(&R[j], &R[j+1]); swap(&T[j], &T[j+1]); \
-                char tmp[33]; strcpy(tmp, N[j]); strcpy(N[j], N[j+1]); strcpy(N[j+1], tmp);}
+    // sorting
+    for(int i = 0; i < p_num-1; i++){
+        for(int j = 0; j < p_num-i-1; j++){
+            if(R[j] > R[j+1] || R[j]==R[j+1] && T[j]>T[j+1]){ 
+                taskswap(j,j+1);
+            }
+        }
+    }
 
-    //printf("After sorting:\n\n");
+    // give priority after sorting
     for(int i = 0; i < p_num; i++){
         P[i] = p_num - 1 - i;
-        //printf("%s %d %d\n", N[i], R[i], T[i]);
     }
-    //printf("\n\n");
 
-    //for(int i = 0; i < p_num; i++) P[i] = i;
-    /* Set scheduler */
+    // build scheduler
     struct sched_param param;
     param.sched_priority = 1;
+
     if(sched_setscheduler(0, SCHED_FIFO, &param) == -1){
         err_sys("set schedluer failed");
     }
     if(sched_setparam(0, &param) == -1){
         err_sys("parent set error");
     }
-    int time_count = 0, start_time = R[0], head = 0, tail = 0;
+
+
+    int time = 0, start_time = R[0], head = 0, tail = 0;
     int queue[1001],arr_f[1001] = {};
     for(int i = 0; i < p_num; i++){
+        // go through every process
 
         int ptime = (i == 0) ? 0 : R[i-1];
         for(int j = 0; j < R[i] - ptime; j++){
             
-            //if(arr_f[queue[kk]] == 1) continue;
             int wpid = 0, status = 0;
             if(head != tail){
             	wpid = waitpid(pid[queue[head]], &status, WNOHANG);
             	if(wpid != 0){
-            	    start_time = time_count;
+            	    start_time = time;
             	    arr_f[queue[head++]] = 1;
-                    // printf("end waiting %s\n", N[queue[head - 1]]);
             	}	
             }
         
-            if(head == tail) start_time = time_count;
-            if(time_count-start_time == 500){
+            if(head == tail) start_time = time;
+            if(time-start_time == 500){
                 int temp = queue[head];
-                start_time = time_count;
-                //printf("After Round-Robin:\nThe sequence of process is [");
+                start_time = time;
                 for(int k = head; k < tail-1; k++){
                     queue[k] = queue[k+1];
-                    //printf("%d ",queue[k]);
                 }
                 queue[tail - 1] = temp;
-                //printf("%d]\n",queue[tail - 1]);
                 for(int k = head; k < tail; k++){
                     P[queue[k]] = p_num - 1 - k; 
                 }
@@ -207,61 +206,48 @@ void RR(){
             }
             volatile unsigned long k;
             for(k=0;k<1000000UL;k++);
-            time_count++;
+            time++;
         }
-    	//fprintf(stderr, "parent fork: %s\n", N[i]);
     	if((pid[i] = fork()) < 0){
     	    err_sys("fork error");
     	}
-    	else if(pid[i] == 0){ /* child */
-            /* Reset scheduler */
-            //struct sched_param param;
-            //print_affinity();
+    	else if(pid[i] == 0){
+            // child case
             char tmp[100];
             sprintf(tmp, "%d", T[i]);
-            //fprintf(stderr, "I start at time %d, p=%d.\n",time_count, 2 + P[i]);
             execlp("./time.o", "./time.o", tmp, (char *)0);
     	}
     	else{
 
             queue[tail++] = i;
-            /* Reset CPU */ 
             cpu_set_t my_set;
             CPU_ZERO(&my_set);
             CPU_SET(0, &my_set);
             sched_setaffinity(pid[i], sizeof(cpu_set_t), &my_set);
-            /* set child priority */
             param.sched_priority = 2 + P[i];
             if(sched_setparam(pid[i], &param) == -1){
                 err_sys("child set error");
             }
     	}	
-		
-    }
-    //parent_wait();
+    }  // end of process loop
     do {
         int wpid = 0, status = 0;
         wpid = waitpid(pid[queue[head]], &status, WNOHANG);
         if(head != tail){
-            if(wpid != 0)
-                {
-                    if(wpid == -1) err_sys("wait child error!");
-                    start_time = time_count;
+            if(wpid != 0){
+                if(wpid == -1) err_sys("wait child error!");
+                start_time = time;
         	    arr_f[queue[head++]] = 1;
-        	    //printf("end waiting %s\n", N[queue[head - 1]]);
         	}
         }
-        if(head == tail) start_time = time_count;
-        if(time_count-start_time == 500){
+        if(head == tail) start_time = time;
+        if(time-start_time == 500){
             int temp = queue[head];
-            start_time = time_count;
-            //printf("After Round-Robin:\nThe sequence of process is [");
+            start_time = time;
             for(int k = head; k < tail-1; k++){
                 queue[k] = queue[k+1];
-                // printf("%d ",queue[k]);
             }
             queue[tail - 1] = temp;
-            //printf("%d]\n",queue[tail - 1]);
             for(int k = head; k < tail; k++){
                 P[queue[k]] = p_num - 1 - k; 
             }
@@ -275,12 +261,12 @@ void RR(){
                     err_sys("child set error");
                 }
             }
-			
-        }
+        }  // end of a round
         volatile unsigned long k;
         for(k=0;k<1000000UL;k++);
-        time_count++;
+        time++;
     } while(head != p_num || head != tail);
+
 }
 
 
