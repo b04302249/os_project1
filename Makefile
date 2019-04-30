@@ -9,3 +9,4 @@ time.o: time.c
 
 clean:
 	rm -f scheduler main.o scheduler.o time.o
+
